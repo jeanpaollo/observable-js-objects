@@ -1,0 +1,46 @@
+{
+  "name": "observable-js-objects",
+  "version": "1.0.0",
+  "description": "The goal is to create observable, mutable objects to deal with observability and functional programming.",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "/dist"
+  ],
+  "scripts": {
+    "compile": "npx tsc",
+    "test": "jest",
+    "prepublishOnly": "npm test && npm run compile"
+  },
+  "pre-push": [
+    "prepublishOnly"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jeanpaollo/observable-js-objects.git"
+  },
+  "keywords": [
+    "observable",
+    "js",
+    "objects"
+  ],
+  "author": "Jean Paollo Olimpio Gomes Ferreira",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/jeanpaollo/observable-js-objects/issues"
+  },
+  "homepage": "https://github.com/jeanpaollo/observable-js-objects#readme",
+  "dependencies": {
+    "decorator-cache-getter": "^1.0.0",
+    "nullish-utils": "^1.4.3",
+    "observable-js-objects": "file:",
+    "rxjs": "^7.8.1"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.12",
+    "jest": "^29.7.0",
+    "pre-push": "^0.1.4",
+    "ts-jest": "^29.1.5",
+    "typescript": "^5.5.2"
+  }
+}
