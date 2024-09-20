@@ -1,6 +1,6 @@
 {
   "name": "observable-js-objects",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "The goal is to create observable, mutable objects to deal with observability and functional programming.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

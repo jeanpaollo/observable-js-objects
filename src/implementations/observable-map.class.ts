@@ -1,11 +1,15 @@
 import { Nillable } from "nullish-utils";
-import { Observable, Subject, map, startWith } from "rxjs";
+import { Observable, Subject, map, merge, startWith } from "rxjs";
 import { ObservableMap } from "../interfaces/observable-map.interface";
 
 export class ObservableMapImpl<K, V>
   extends Map<K, V>
   implements ObservableMap<K, V>
 {
+  static of<K, V>(entries?: readonly (readonly [K, V])[] | null) {
+    return new ObservableMapImpl(entries);
+  }
+
   private readonly _set$ = new Subject<[K, V]>();
   readonly set$ = this._set$.asObservable();
 
@@ -15,8 +19,9 @@ export class ObservableMapImpl<K, V>
   private readonly _delete$ = new Subject<Nillable<[K, V]>>();
   readonly delete$ = this._delete$.asObservable();
 
-  private readonly _change$ = new Subject<this>();
-  readonly change$ = this._change$.asObservable();
+  readonly change$ = merge(this.set$, this.delete$, this.clear$).pipe(
+    map(() => this)
+  ) as Observable<this>;
 
   readonly values$ = this.change$.pipe(
     startWith(null),

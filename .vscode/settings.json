@@ -4,5 +4,10 @@
   "editor.codeActionsOnSave": {
     "source.fixAll": "always",
     "source.organizeImports": "always"
+  },
+  "workbench.colorCustomizations": {
+    "activityBar.background": "#322E13",
+    "titleBar.activeBackground": "#46401B",
+    "titleBar.activeForeground": "#FBFAF4"
   }
 }
