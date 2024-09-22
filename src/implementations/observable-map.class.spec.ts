@@ -10,11 +10,11 @@ const listOfArguments = [
 ];
 
 describe(`Test of ${ObservableMapImpl.name}`, () => {
-  describe("must it instantiates:", () => {
-    it("with new and no arguments", () =>
+  describe("it must instantiates: ", () => {
+    it("with new and no arguments ", () =>
       expect(new ObservableMapImpl()).not.toBeNull());
 
-    it(`by static method and no arguments`, () =>
+    it(`by static method and no arguments `, () =>
       expect(ObservableSetImpl.of()).not.toBeNull());
 
     for (let args of listOfArguments) {
