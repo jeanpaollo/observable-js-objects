@@ -1,20 +1,23 @@
 import { Observable } from "rxjs";
 
-export interface ObservableFileReader<T extends Blob = Blob>
-  extends FileReader {
-  blob: T | undefined | null;
-  readonly blob$: Observable<T | undefined | null>;
+export interface DataURL {
+  readonly mime: string;
+  readonly content: string;
+}
+
+export interface ObservableFileReader<
+  T extends Blob = Blob,
+  R = string | ArrayBuffer | DataURL
+> {
+  readonly blob: T;
   readonly error$: Observable<typeof FileReader.prototype.error>;
   readonly readyState$: Observable<typeof FileReader.prototype.readyState>;
-  readonly result$: Observable<typeof FileReader.prototype.result>;
-  readonly abortEvent$: Observable<ProgressEvent>;
-  readonly errorEvent$: Observable<ProgressEvent>;
-  readonly loadEvent$: Observable<ProgressEvent>;
-  readonly loadEndEvent$: Observable<ProgressEvent>;
-  readonly loadStartEvent$: Observable<ProgressEvent>;
-  readonly progressEvent$: Observable<ProgressEvent>;
-  readonly arrayBuffer$: Observable<ArrayBuffer>;
-  readonly dataURL$: Observable<string>;
-  readonly binaryString$: Observable<string>;
-  readonly text$: Observable<string>;
+  readonly result$: Observable<R>;
+  readonly abortEvent$: Observable<ProgressEvent<FileReader>>;
+  readonly errorEvent$: Observable<ProgressEvent<FileReader>>;
+  readonly loadEvent$: Observable<ProgressEvent<FileReader>>;
+  readonly loadEndEvent$: Observable<ProgressEvent<FileReader>>;
+  readonly loadStartEvent$: Observable<ProgressEvent<FileReader>>;
+  readonly progressEvent$: Observable<ProgressEvent<FileReader>>;
+  readonly isReady$: Observable<boolean>;
 }

@@ -1,113 +1,156 @@
 import {
   BehaviorSubject,
   distinctUntilChanged,
-  EMPTY,
   filter,
-  first,
-  fromEvent,
   map,
   merge,
-  Observable,
   of,
-  share,
   shareReplay,
-  startWith,
+  Subject,
   switchMap,
   tap,
 } from "rxjs";
-import { ObservableFileReader } from "../interfaces/observable-file-reader.interface";
-export class ObservableFileReaderImpl<T extends Blob = Blob>
-  extends FileReader
-  implements ObservableFileReader
+import {
+  DataURL,
+  ObservableFileReader,
+} from "../interfaces/observable-file-reader.interface";
+import { DataURLImpl } from "./data-url.class";
+export abstract class AbstractObservableFileReader<
+  T extends Blob = Blob,
+  R = string | ArrayBuffer | DataURL
+> implements ObservableFileReader<T, R>
 {
-  static readonly of = (blob: Blob) => new ObservableFileReaderImpl(blob);
+  abstract invoker(source: T): void;
+  map(source: any) {
+    return source as R;
+  }
 
-  static readonly result = Object.freeze({
-    readAsArrayBuffer: (blob: Blob) => new ObservableFileReaderImpl(blob),
-  });
+  protected readonly _fileReader = new FileReader();
 
-  readonly abortEvent$ = fromEvent<ProgressEvent>(this, "abort").pipe(share());
+  constructor(readonly blob: T) {
+    Object.freeze(this);
 
-  readonly errorEvent$ = fromEvent<ProgressEvent>(this, "error").pipe(share());
+    this._fileReader.onerror = (event) => {
+      this._error$.next(this._fileReader.error);
+      this._errorEvent$.next(event);
+    };
 
-  readonly loadEvent$ = fromEvent<ProgressEvent>(this, "load").pipe(share());
+    this._fileReader.onload = (event) => this._loadEvent$.next(event);
 
-  readonly loadEndEvent$ = fromEvent<ProgressEvent>(this, "loadend").pipe(
-    share()
-  );
+    this._fileReader.onabort = (event) => this._abortEvent$.next(event);
 
-  readonly loadStartEvent$ = fromEvent<ProgressEvent>(this, "loadstart").pipe(
-    share()
-  );
+    this._fileReader.onloadend = (event) => this._loadEndEvent$.next(event);
 
-  readonly progressEvent$ = fromEvent<ProgressEvent>(this, "progress").pipe(
-    share()
-  );
+    this._fileReader.onloadstart = (event) => this._loadStartEvent$.next(event);
 
-  readonly readyState$ = this.progressEvent$.pipe(
-    startWith(null),
-    map(() => this.readyState),
+    this._fileReader.onprogress = (event) => {
+      this._progressEvent$.next(event);
+      this._readyState$.next(this._fileReader.readyState);
+    };
+  }
+
+  private readonly _error$ = new Subject<typeof FileReader.prototype.error>();
+
+  readonly error$ = this._error$.asObservable();
+
+  private readonly _abortEvent$ = new Subject<ProgressEvent<FileReader>>();
+
+  readonly abortEvent$ = this._abortEvent$.asObservable();
+
+  private readonly _errorEvent$ = new Subject<ProgressEvent<FileReader>>();
+
+  readonly errorEvent$ = this._errorEvent$.asObservable();
+
+  private readonly _loadEvent$ = new Subject<ProgressEvent<FileReader>>();
+
+  readonly loadEvent$ = this._loadEvent$.asObservable();
+
+  private readonly _loadEndEvent$ = new Subject<ProgressEvent<FileReader>>();
+
+  readonly loadEndEvent$ = this._loadEndEvent$.asObservable();
+
+  private readonly _loadStartEvent$ = new Subject<ProgressEvent<FileReader>>();
+
+  readonly loadStartEvent$ = this._loadStartEvent$.asObservable();
+
+  private readonly _progressEvent$ = new Subject<ProgressEvent<FileReader>>();
+
+  readonly progressEvent$ = this._progressEvent$.asObservable();
+
+  private readonly _readyState$ = new BehaviorSubject<
+    typeof FileReader.prototype.readyState
+  >(0);
+
+  readonly readyState$ = merge(
+    of(null),
+    this._readyState$,
+    this.loadEndEvent$
+  ).pipe(
+    map(() => this._fileReader.readyState),
     distinctUntilChanged(),
     shareReplay(1)
   );
 
-  readonly result$ = merge(
-    this.readyState$.pipe(filter((e) => e === 2)),
-    this.loadEvent$
-  ).pipe(
-    map(() => this.result),
+  readonly isReady$ = this.readyState$.pipe(
+    map(() => this._fileReader.readyState == 2),
+    distinctUntilChanged(),
     shareReplay(1)
   );
 
-  readonly error$ = this.loadEndEvent$.pipe(
-    map(() => this.error),
-    share()
+  readonly result$ = of(null).pipe(
+    tap(() => setTimeout(() => this.invoker(this.blob), 5)),
+    switchMap(() =>
+      this.isReady$.pipe(
+        filter((e) => e),
+        map(() => this.map(this._fileReader.result) as R)
+      )
+    ),
+    shareReplay(1)
   );
 
-  private readonly _blob$ = new BehaviorSubject<T | undefined | null>(null);
+  private readonly _subscriptions = merge(
+    this.loadEndEvent$.pipe(tap(() => this._readyState$.complete())),
+    merge(this.abortEvent$, this.errorEvent$).pipe(
+      tap(() =>
+        [
+          this._abortEvent$,
+          this._error$,
+          this._errorEvent$,
+          this._loadEndEvent$,
+          this._loadEvent$,
+          this._loadStartEvent$,
+          this._progressEvent$,
+          this._readyState$,
+        ].forEach((observable) => observable.complete())
+      )
+    )
+  ).subscribe();
+}
 
-  readonly blob$ = this._blob$.asObservable();
+export class ObservableArrayBufferFromFileReader<
+  T extends Blob = Blob
+> extends AbstractObservableFileReader<T, ArrayBuffer> {
+  invoker(source: T) {
+    this._fileReader.readAsArrayBuffer(source);
+  }
+}
 
-  readonly arrayBuffer$ = this.observableOperation<ArrayBuffer>(
-    this.readAsArrayBuffer
-  );
+export class ObservableTextFromFileReader<
+  T extends Blob = Blob
+> extends AbstractObservableFileReader<T, string> {
+  invoker(source: T) {
+    this._fileReader.readAsText(source);
+  }
+}
 
-  readonly dataURL$ = this.observableOperation<string>(this.readAsDataURL);
-
-  readonly binaryString$ = this.observableOperation<string>(
-    this.readAsBinaryString
-  );
-
-  readonly text$ = this.observableOperation<string>(this.readAsText);
-
-  set blob(value) {
-    this._blob$.next(value);
+export class ObservableDataURLFromFileReader<
+  T extends Blob = Blob
+> extends AbstractObservableFileReader<T, DataURL> {
+  invoker(source: T) {
+    this._fileReader.readAsDataURL(source);
   }
 
-  get blob() {
-    return this._blob$.value;
-  }
-
-  constructor(blob?: T) {
-    super();
-    blob && this._blob$.next(blob);
-  }
-
-  observableOperation<R>(fn: (...args: any[]) => any) {
-    return of(null).pipe(
-      tap(() => {
-        if (this.readyState === 1) throw Error("Another operation in progress");
-      }),
-      switchMap(() => this.blob$.pipe(first())),
-      switchMap((blob) => {
-        if (!blob) return EMPTY;
-
-        setTimeout(() => fn.call(this, blob), 5);
-        return this.loadEvent$.pipe(
-          switchMap(() => this.result$)
-        ) as Observable<R>;
-      }),
-      shareReplay(1)
-    );
+  map(source: any) {
+    return new DataURLImpl(source);
   }
 }

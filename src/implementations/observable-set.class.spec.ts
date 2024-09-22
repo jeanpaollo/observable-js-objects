@@ -4,7 +4,7 @@ import { ObservableSetImpl } from "./observable-set.class";
 const listOfArguments = [[], [1], [1, 2], [1, 2, 3]];
 
 describe(`Test of ${ObservableSetImpl.name}`, () => {
-  describe("must it instantiates:", () => {
+  describe("it must instantiates:", () => {
     it(`with new and no arguments`, () =>
       expect(new ObservableSetImpl()).not.toBeNull());
 
