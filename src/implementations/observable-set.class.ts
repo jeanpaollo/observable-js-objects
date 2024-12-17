@@ -26,7 +26,7 @@ export class ObservableSetImpl<T, I extends Iterable<T> = Iterable<T>>
   readonly clear$ = this._clear$.asObservable();
 
   //TODO: Hide this property
-  readonly _deleteAll$ = new Subject<I>();
+  private readonly _deleteAll$ = new Subject<I>();
   readonly deleteAll$ = this._deleteAll$.asObservable();
 
   readonly change$ = merge(this.add$, this.delete$, this.clear$).pipe(
@@ -55,6 +55,11 @@ export class ObservableSetImpl<T, I extends Iterable<T> = Iterable<T>>
           return ObservableSetImpl.prototype.addAll.bind(this);
         },
       },
+      clear: {
+        get() {
+          return ObservableSetImpl.prototype.clear.bind(this);
+        },
+      },
       delete: {
         get() {
           return ObservableSetImpl.prototype.delete.bind(this);
@@ -65,9 +70,9 @@ export class ObservableSetImpl<T, I extends Iterable<T> = Iterable<T>>
           return ObservableSetImpl.prototype.deleteAll.bind(this);
         },
       },
-      clear: {
+      difference: {
         get() {
-          return ObservableSetImpl.prototype.clear.bind(this);
+          return ObservableSetImpl.prototype.difference.bind(this);
         },
       },
       has: {
@@ -75,21 +80,37 @@ export class ObservableSetImpl<T, I extends Iterable<T> = Iterable<T>>
           return ObservableSetImpl.prototype.has.bind(this);
         },
       },
+      intersection: {
+        get() {
+          return ObservableSetImpl.prototype.intersection.bind(this);
+        },
+      },
+      isDisjointFrom: {
+        get() {
+          return ObservableSetImpl.prototype.isDisjointFrom.bind(this);
+        },
+      },
+      isSubsetOf: {
+        get() {
+          return ObservableSetImpl.prototype.isSubsetOf.bind(this);
+        },
+      },
+      isSupersetOf: {
+        get() {
+          return ObservableSetImpl.prototype.isSupersetOf.bind(this);
+        },
+      },
+      symmetricDifference: {
+        get() {
+          return ObservableSetImpl.prototype.symmetricDifference.bind(this);
+        },
+      },
+      union: {
+        get() {
+          return ObservableSetImpl.prototype.union.bind(this);
+        },
+      },
     });
-  }
-
-  addAll(...items: T[]) {
-    (items ?? []).forEach((e) => this.add(e));
-    this._addAll$.next(items as unknown as I);
-
-    return this;
-  }
-
-  deleteAll(...items: T[]) {
-    (items ?? []).forEach((e) => this.delete(e));
-    this._deleteAll$.next(items as unknown as I);
-
-    return this;
   }
 
   override add(item: T) {
@@ -101,11 +122,11 @@ export class ObservableSetImpl<T, I extends Iterable<T> = Iterable<T>>
     return this;
   }
 
-  override delete(item: T) {
-    const deleted = super.delete(item);
-    if (deleted) this._delete$.next(item);
+  addAll(...items: T[]) {
+    items.forEach((e) => this.add(e));
+    this._addAll$.next(items as unknown as I);
 
-    return deleted;
+    return this;
   }
 
   override clear() {
@@ -113,5 +134,48 @@ export class ObservableSetImpl<T, I extends Iterable<T> = Iterable<T>>
     this._clear$.next(this);
 
     return this;
+  }
+
+  override delete(item: T) {
+    const deleted = super.delete(item);
+    if (deleted) this._delete$.next(item);
+
+    return deleted;
+  }
+
+  deleteAll(...items: T[]) {
+    items.forEach((e) => this.delete(e));
+    this._deleteAll$.next(items as unknown as I);
+
+    return this;
+  }
+
+  deleteDifference(...items: T[]) {
+    this.deleteAll(...this.values().filter((e) => !items.includes(e)));
+    return this;
+  }
+
+  override difference<U>(other: ReadonlySetLike<U>) {
+    return new ObservableSetImpl<T>(super.difference(other));
+  }
+
+  override intersection<U>(other: ReadonlySetLike<U>) {
+    return new ObservableSetImpl<T & U>(super.intersection(other));
+  }
+
+  filter(predicate: (item: T, index?: number) => boolean) {
+    return new ObservableSetImpl<T, I>(this.values().filter(predicate));
+  }
+
+  resetTo(...items: T[]) {
+    return this.deleteDifference(...items).addAll(...items);
+  }
+
+  override symmetricDifference<U>(other: ReadonlySetLike<U>) {
+    return new ObservableSetImpl<T | U>(super.symmetricDifference(other));
+  }
+
+  override union<U>(other: ReadonlySetLike<U>) {
+    return new ObservableSetImpl<T | U>(super.union(other));
   }
 }
