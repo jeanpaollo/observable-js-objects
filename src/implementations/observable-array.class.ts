@@ -29,6 +29,9 @@ export class ObservableArrayImpl<T>
   private readonly _unshift$ = new Subject<T[]>();
   readonly unshift$ = this._unshift$.asObservable();
 
+  private readonly _deleteDifference$ = new Subject<T[]>();
+  readonly deleteDifference$ = this._deleteDifference$.asObservable();
+
   readonly change$: Observable<this> = merge(
     this.pop$,
     this.push$,
@@ -37,7 +40,8 @@ export class ObservableArrayImpl<T>
     this.shift$,
     this.sort$,
     this.splice$,
-    this.unshift$
+    this.unshift$,
+    this.deleteDifference$
   ).pipe(
     map(() => this),
     share()
@@ -107,5 +111,19 @@ export class ObservableArrayImpl<T>
     this._unshift$.next(items);
 
     return _return;
+  }
+
+  deleteDifference(...items: T[]) {
+    const itemsToRemove = this.map((item, index) => ({
+      item,
+      index,
+      includes: !items.includes(item),
+    })).filter((e) => e.includes);
+
+    this._deleteDifference$.next(itemsToRemove.map((e) => e.item));
+
+    itemsToRemove.forEach((e) => this.splice(e.index, 1));
+
+    return this;
   }
 }

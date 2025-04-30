@@ -9,12 +9,8 @@
   ],
   "scripts": {
     "compile": "npx tsc",
-    "test": "jest",
     "prepublishOnly": "npm test && npm run compile"
   },
-  "pre-push": [
-    "prepublishOnly"
-  ],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/jeanpaollo/observable-js-objects.git"

@@ -1,5 +1,5 @@
 import { Observable, Subject, map, merge, shareReplay, startWith } from "rxjs";
-import { ObservableSet } from "../interfaces/observable-set.interface";
+import { ObservableSet } from "./observable-set.interface";
 
 export class ObservableSetImpl<T, I extends Iterable<T> = Iterable<T>>
   extends Set<T>
@@ -26,8 +26,12 @@ export class ObservableSetImpl<T, I extends Iterable<T> = Iterable<T>>
   readonly clear$ = this._clear$.asObservable();
 
   //TODO: Hide this property
-  readonly _deleteAll$ = new Subject<I>();
+  private readonly _deleteAll$ = new Subject<I>();
   readonly deleteAll$ = this._deleteAll$.asObservable();
+
+  //TODO: Hide this property
+  private readonly _deleteDifference$ = new Subject<I>();
+  readonly deleteDifference$ = this._deleteDifference$.asObservable();
 
   readonly change$ = merge(this.add$, this.delete$, this.clear$).pipe(
     map(() => this)
@@ -90,6 +94,22 @@ export class ObservableSetImpl<T, I extends Iterable<T> = Iterable<T>>
     this._deleteAll$.next(items as unknown as I);
 
     return this;
+  }
+
+  deleteDifference(...items: T[]) {
+    const difference = [...this].filter((e) => !items.includes(e));
+
+    difference.forEach((e) => {
+      this.delete(e);
+    });
+
+    this._deleteDifference$.next(difference as unknown as I);
+    return this;
+  }
+
+  difference(...items: T[]) {
+    const filteredItems = items.filter((item) => this.has(item));
+    return new ObservableSetImpl<T, I>(filteredItems);
   }
 
   override add(item: T) {
